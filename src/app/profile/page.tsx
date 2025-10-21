@@ -1,34 +1,51 @@
 // app/profile/page.tsx
+import { currentUser } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 import UserProfile from '@/app/components/UserProfile';
-import { User } from '@/lib/types';
+import { User } from '@/lib/types'; // Asumimos que la base de datos devuelve este tipo
+import { db } from '@/lib/db'; // Importamos la DB simulada
 
-// Esta función se ejecuta en el servidor para obtener los datos
-async function getUserData(): Promise<User | null> {
-  // En una aplicación real, obtendrías el ID del usuario de la sesión (ej. NextAuth.js, Clerk)
-  // Por ahora, usamos una API que asume que la cookie de sesión identifica al usuario.
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/user/Get`, {
-      cache: 'no-store', // No cachear datos de usuario
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch (error) {
-    console.error("Failed to fetch user:", error);
-    return null;
+// Esta función ahora combina datos de Clerk y de nuestra DB
+async function getCombinedUserData(): Promise<User | null> {
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return null; // No hay usuario logueado
   }
+
+  // Buscamos al usuario en nuestra base de datos con el ID de Clerk
+  let appUser = await db.user.findUnique({ userId: clerkUser.id });
+
+  // Si el usuario no existe en nuestra DB, este es su primer inicio de sesión.
+  // ¡Aquí es donde lo crearíamos! (En un caso real, llamaríamos a la API /user/Create)
+  if (!appUser) {
+    // Simulamos la creación de un nuevo usuario en nuestra DB
+    appUser = {
+      id: clerkUser.id,
+      name: clerkUser.firstName || 'Nuevo Aventurero',
+      email: clerkUser.emailAddresses[0].emailAddress,
+      profilePictureUrl: clerkUser.imageUrl,
+      level: 1,
+      experience: 0,
+    };
+    // Aquí guardarías 'appUser' en tu base de datos D1.
+  }
+  
+  // Devolvemos el usuario de nuestra aplicación, que ya contiene todos los datos.
+  return appUser;
 }
 
 export default async function ProfilePage() {
-  const user = await getUserData();
+  const user = await getCombinedUserData();
 
   if (!user) {
-    return <p>No se pudo cargar el perfil del usuario. Por favor, inicia sesión.</p>;
+    // Esto no debería pasar gracias al middleware, pero es una buena práctica de seguridad
+    redirect('/sign-in');
   }
 
   return (
-    <main className="container mx-auto p-4">
+    <div className="container mx-auto">
       <h1 className="text-3xl font-bold mb-6">Mi Perfil</h1>
       <UserProfile user={user} />
-    </main>
+    </div>
   );
 }

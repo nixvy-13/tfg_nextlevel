@@ -1,22 +1,21 @@
 // app/api/missions/[[...slug]]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db'; // Placeholder de tu base de datos
+import { auth } from '@clerk/nextjs/server';
+import { db } from '@/lib/db';
 import { Mission } from '@/lib/types';
 
-// En un caso real, esta función obtendría el ID del usuario de su sesión.
-// Por ahora, usamos un ID fijo.
-const getUserIdFromSession = async (req: NextRequest): Promise<string> => {
-    return 'user_12345';
-};
-
-// ... (la función GET no cambia y queda como estaba) ...
 export async function GET(
   req: NextRequest,
   { params }: { params: { slug: string[] } }
 ) {
+    // LA CORRECCIÓN: Añadimos 'await' para resolver la promesa que devuelve auth()
+    const { userId } = await auth(); 
+    if (!userId) {
+      return NextResponse.json({ error: 'No autorizado. Por favor, inicia sesión.' }, { status: 401 });
+    }
+
     const action = params.slug?.[0];
-    const userId = await getUserIdFromSession(req);
     
     if (action === 'GetDefault') {
         const defaultMissions = await db.defaultMissions.findMany();
@@ -26,20 +25,17 @@ export async function GET(
     const taskId = params.slug?.[1];
 
     if (taskId) {
-        const mission = await db.missions.findUnique({ missionId: taskId, userId });
+        const mission = await db.missions.findUnique({ missionId: taskId, userId: userId });
         if (!mission) {
             return NextResponse.json({ error: 'Misión no encontrada o no te pertenece' }, { status: 404 });
         }
         return NextResponse.json(mission);
     } else {
-        const missions = await db.missions.findMany({ userId });
+        const missions = await db.missions.findMany({ userId: userId });
         return NextResponse.json(missions);
     }
 }
 
-// --- CÓDIGO CORREGIDO EN LA FUNCIÓN POST ---
-
-// Define el tipo esperado para el cuerpo de la petición de 'Complete'
 interface CompleteMissionBody {
   missionId: string;
 }
@@ -48,8 +44,13 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { slug: string[] } }
 ) {
+    // LA CORRECCIÓN: También aquí, añadimos 'await'
+    const { userId } = await auth(); 
+    if (!userId) {
+      return NextResponse.json({ error: 'No autorizado. Por favor, inicia sesión.' }, { status: 401 });
+    }
+    
     const action = params.slug?.[0];
-    const userId = await getUserIdFromSession(req);
     
     if (action === 'Create') {
         const missionsData: Omit<Mission, 'id' | 'userId' | 'isCompleted' | 'createdAt'>[] = await req.json();
@@ -58,7 +59,7 @@ export async function POST(
         for (const data of missionsData) {
             const newMission = await db.missions.create({
                 ...data,
-                userId
+                userId: userId
             });
             createdMissions.push(newMission);
         }
@@ -66,23 +67,17 @@ export async function POST(
     }
 
     if(action === 'Complete') {
-        // AQUÍ ESTÁ LA CORRECCIÓN:
-        // Hacemos una aserción de tipo para decirle a TypeScript que esperamos un objeto
-        // con la propiedad missionId de tipo string.
         const { missionId } = await req.json() as CompleteMissionBody;
         
-        // Ahora TypeScript ya no se queja y sabe que missionId es un string.
-        const mission = await db.missions.findUnique({ missionId, userId });
+        const mission = await db.missions.findUnique({ missionId, userId: userId });
         
         if (!mission || mission.isCompleted) {
             return NextResponse.json({ error: 'Misión no válida para completar' }, { status: 400 });
         }
 
-        // Marcar misión como completada
-        await db.missions.update({ missionId, userId, data: { isCompleted: true } });
+        await db.missions.update({ missionId, userId: userId, data: { isCompleted: true } });
 
-        // Actualizar experiencia y nivel del usuario
-        const user = await db.user.findUnique({ userId });
+        const user = await db.user.findUnique({ userId: userId });
         if(user) {
             const newExperience = user.experience + mission.experienceReward;
             const experienceForNextLevel = user.level * 100;
@@ -92,7 +87,7 @@ export async function POST(
                 newLevel += 1;
             }
             
-            await db.user.update({ userId, data: { experience: newExperience, level: newLevel } });
+            await db.user.update({ userId: userId, data: { experience: newExperience, level: newLevel } });
         }
 
         return NextResponse.json({ message: 'Misión completada con éxito' });
