@@ -1,63 +1,72 @@
 // lib/db.ts
-// ATENCIÓN: Este fichero es un placeholder.
-// Deberás reemplazar esta lógica con las llamadas reales a tu base de datos Cloudflare D1.
-
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { User, Mission, DefaultMission } from './types';
 
-// --- DATOS SIMULADOS ---
-const mockUser: User = {
-  id: 'user_12345',
-  name: 'Aventurero Novato',
-  email: 'playerone@example.com',
-  profilePictureUrl: 'https://i.pravatar.cc/150?u=user_12345',
-  level: 1,
-  experience: 75,
-};
+// 1. Convertimos la función a 'async'
+async function getDB() {
+  // 2. Usamos 'await' para esperar a que la promesa del contexto se resuelva
+  const { env } = await getCloudflareContext({ async: true });
+  return env.DB;
+}
 
-let mockMissions: Mission[] = [
-  { id: 'mission_1', userId: 'user_12345', title: 'Hacer la cama', description: 'Tender la cama al levantarse.', experienceReward: 10, isCompleted: true, createdAt: new Date().toISOString() },
-  { id: 'mission_2', userId: 'user_12345', title: 'Leer 10 páginas de un libro', description: 'Fomentar el hábito de la lectura.', experienceReward: 25, isCompleted: false, createdAt: new Date().toISOString() },
-];
+// --- LÓGICA DE BASE DE DATOS (REAL CON D1) ---
 
-const mockDefaultMissions: DefaultMission[] = [
-    { id: 'default_1', title: 'Beber 2 litros de agua', description: 'Mantente hidratado durante el día.', experienceReward: 15 },
-    { id: 'default_2', title: 'Hacer 15 minutos de ejercicio', description: 'Una rutina corta para empezar el día con energía.', experienceReward: 30 },
-];
-
-
-// --- LÓGICA DE BASE DE DATOS (SIMULADA) ---
-
-// Misiones
 export const db = {
   missions: {
-    findMany: async ({ userId }: { userId: string }) => mockMissions.filter(m => m.userId === userId),
-    findUnique: async ({ missionId, userId }: { missionId: string; userId: string }) => mockMissions.find(m => m.id === missionId && m.userId === userId) || null,
+    findMany: async ({ userId }: { userId: string }): Promise<Mission[]> => {
+      // 3. Usamos 'await' CADA VEZ que llamamos a getDB()
+      const db = await getDB();
+      const stmt = db.prepare('SELECT * FROM Tasks WHERE userId = ? AND isDefault = 0').bind(userId);
+      const { results } = await stmt.all<Mission>();
+      return results;
+    },
+    findUnique: async ({ missionId, userId }: { missionId: string; userId: string }): Promise<Mission | null> => {
+      const db = await getDB();
+      const stmt = db.prepare('SELECT * FROM Tasks WHERE id = ? AND userId = ?').bind(missionId, userId);
+      return await stmt.first<Mission>();
+    },
     create: async (data: { title: string; description: string; experienceReward: number; userId: string }) => {
-        const newMission: Mission = { ...data, id: `mission_${Date.now()}`, isCompleted: false, createdAt: new Date().toISOString() };
-        mockMissions.push(newMission);
-        return newMission;
+        const db = await getDB();
+        const stmt = db.prepare(
+            'INSERT INTO Tasks (title, description, experienceReward, userId, type) VALUES (?, ?, ?, ?, ?)'
+        ).bind(data.title, data.description, data.experienceReward, data.userId, 'ONCE');
+        await stmt.run();
+        return { success: true }; 
     },
     update: async ({ missionId, userId, data }: { missionId: string; userId: string, data: { isCompleted: boolean }}) => {
-        const missionIndex = mockMissions.findIndex(m => m.id === missionId && m.userId === userId);
-        if (missionIndex > -1) {
-            mockMissions[missionIndex] = { ...mockMissions[missionIndex], ...data };
-            return mockMissions[missionIndex];
-        }
-        return null;
+      const db = await getDB();
+      const stmt = db.prepare('INSERT INTO TaskCompletions (taskId, userId) VALUES (?, ?)')
+        .bind(missionId, userId);
+      await stmt.run();
+      return { success: true };
     }
   },
   defaultMissions: {
-      findMany: async () => mockDefaultMissions,
+      findMany: async (): Promise<DefaultMission[]> => {
+        const db = await getDB();
+        const stmt = db.prepare('SELECT * FROM Tasks WHERE isDefault = 1');
+        const { results } = await stmt.all<DefaultMission>();
+        return results;
+      },
   },
   user: {
-    findUnique: async ({ userId }: { userId: string }) => (userId === mockUser.id ? mockUser : null),
-    update: async({ userId, data }: { userId: string, data: { experience: number, level: number }}) => {
-        if(userId === mockUser.id) {
-            mockUser.experience = data.experience;
-            mockUser.level = data.level;
-            return mockUser;
-        }
-        return null;
-    }
+    findUnique: async ({ userId }: { userId: string }): Promise<User | null> => {
+        const db = await getDB();
+        const stmt = db.prepare('SELECT * FROM Users WHERE clerkId = ?').bind(userId);
+        const appUser = await stmt.first<{clerkId: string, username: string, experience: number, level: number}>();
+        
+        if (!appUser) return null;
+
+        return {
+          id: appUser.clerkId,
+          name: appUser.username,
+          level: appUser.level,
+          experience: appUser.experience,
+          email: '', 
+          profilePictureUrl: '',
+        };
+    },
+    // Aquí irían las futuras funciones `update` y `create` para el usuario,
+    // y también necesitarían usar `await getDB()`.
   }
 };
