@@ -1,10 +1,12 @@
 // app/layout.tsx
+
+import { dark } from '@clerk/themes';
 import { ClerkProvider, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import './globals.css'; // Asegúrate de tener tu fichero de estilos global
+import './globals.css';
 
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Gamifica Tu Vida',
   description: 'Completa misiones, sube de nivel.',
 };
@@ -15,11 +17,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={{
+      theme: dark,
+    }}>
       <html lang="es">
-        <body>
-          <header className="flex justify-between items-center p-4 border-b">
-            <Link href="/" className="text-xl font-bold">
+        <body className="bg-slate-900 text-slate-200"> 
+          <header className="flex justify-between items-center p-4 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-10">
+            <Link href="/" className="text-xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors">
               GamifyLife
             </Link>
             <div className="flex items-center gap-4">
@@ -29,13 +33,13 @@ export default function RootLayout({
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>
               <SignedOut>
-                <Link href="/sign-in" className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+                <Link href="/sign-in" className="px-4 py-2 bg-cyan-500 text-black font-bold rounded-lg shadow-md hover:bg-cyan-400 transition-colors">
                   Iniciar Sesión
                 </Link>
               </SignedOut>
             </div>
           </header>
-          <main className="p-4">{children}</main>
+          <main className="p-4 md:p-8">{children}</main>
         </body>
       </html>
     </ClerkProvider>
