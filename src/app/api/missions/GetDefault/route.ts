@@ -1,7 +1,7 @@
 // src/app/api/missions/GetDefault/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 export async function GET() {
   const { userId } = await auth();
@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const defaultMissions = await db.defaultMissions.findMany();
+    const defaultMissions = await data.defaultMissions.findMany();
     return NextResponse.json(defaultMissions);
   } catch (error) {
     console.error('Error fetching default missions:', error);

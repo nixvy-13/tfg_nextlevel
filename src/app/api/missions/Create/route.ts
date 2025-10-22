@@ -1,7 +1,7 @@
 // src/app/api/missions/Create/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 import { Mission } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const missionsData: Omit<Mission, 'id' | 'userId' | 'isCompleted' | 'createdAt'>[] = await req.json();
-    for (const data of missionsData) {
-      await db.missions.create({ ...data, userId });
+    for (const dat of missionsData) {
+      await data.missions.create({ ...dat, userId });
     }
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

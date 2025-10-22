@@ -1,7 +1,7 @@
 // src/app/api/user/Modify/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 interface ModifyUserBody {
   username?: string;
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     // Aquí podrías añadir validación para el username (longitud, caracteres, si ya existe, etc.)
 
     // Creamos una función 'modify' en nuestro db.user
-    await db.user.modify({ userId, data: { username } });
+    await data.user.modify({ userId, data: { username } });
 
     return NextResponse.json({ message: 'Usuario modificado con éxito.' });
   } catch (error) {

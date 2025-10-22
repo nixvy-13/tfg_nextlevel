@@ -1,7 +1,7 @@
 // src/app/api/user/Create/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 export async function POST(_req: NextRequest) {
   const { userId } = await auth();
@@ -11,7 +11,7 @@ export async function POST(_req: NextRequest) {
   }
   
   try {
-    const existingUser = await db.user.findUnique({ userId });
+    const existingUser = await data.user.findUnique({ userId });
     if (existingUser) {
       return NextResponse.json({ error: 'El usuario ya existe.' }, { status: 409 });
     }
@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest) {
     const clerkUser = await client.users.getUser(userId);
     const username = clerkUser.username || `user_${userId.slice(5, 12)}`;
 
-    await db.user.create({ clerkId: userId, username: username });
+    await data.user.create({ clerkId: userId, username: username });
 
     return NextResponse.json({ message: 'Usuario creado con éxito' }, { status: 201 });
   } catch (error) {

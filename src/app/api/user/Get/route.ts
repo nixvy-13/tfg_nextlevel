@@ -1,7 +1,7 @@
 // src/app/api/user/Get/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const { userId: currentUserId } = await auth();
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // 1. Obtenemos el usuario de nuestra base de datos
-    const appUser = await db.user.findUnique({ userId: targetUserId });
+    const appUser = await data.user.findUnique({ userId: targetUserId });
     if (!appUser) {
       return NextResponse.json({ error: 'Usuario no encontrado en la aplicación.' }, { status: 404 });
     }

@@ -2,7 +2,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import UserProfile from '@/app/components/UserProfile';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 // Este es el flujo de datos correcto para la página de perfil
 export default async function ProfilePage() {
@@ -13,13 +13,13 @@ export default async function ProfilePage() {
   }
 
   // 1. Buscamos al usuario en nuestra base de datos
-  let appUser = await db.user.findUnique({ userId: clerkUser.id });
+  let appUser = await data.user.findUnique({ userId: clerkUser.id });
 
   // 2. Si el usuario NO existe, es su primer inicio de sesión. ¡Lo creamos!
   if (!appUser) {
     const username = clerkUser.username || `user_${clerkUser.id.slice(5, 12)}`;
     // Llamamos a la función 'create' de nuestra DB
-    await db.user.create({ clerkId: clerkUser.id, username: username });
+    await data.user.create({ clerkId: clerkUser.id, username: username });
     // Creamos un objeto 'appUser' temporal con los valores por defecto para mostrar en la página inmediatamente
     appUser = {
       clerkId: clerkUser.id,

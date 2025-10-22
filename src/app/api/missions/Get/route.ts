@@ -1,7 +1,7 @@
 // src/app/api/missions/Get/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
+import { data } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth();
@@ -15,13 +15,13 @@ export async function GET(req: NextRequest) {
   try {
     if (taskId) {
       // Si hay taskId, buscamos una misión específica
-      const mission = await db.missions.findUnique({ missionId: taskId, userId });
+      const mission = await data.missions.findUnique({ missionId: taskId, userId });
       return mission
         ? NextResponse.json(mission)
         : NextResponse.json({ error: 'Misión no encontrada' }, { status: 404 });
     } else {
       // Si no, devolvemos todas las misiones del usuario
-      const missions = await db.missions.findMany({ userId });
+      const missions = await data.missions.findMany({ userId });
       return NextResponse.json(missions);
     }
   } catch (error) {
