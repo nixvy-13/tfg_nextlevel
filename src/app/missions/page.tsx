@@ -1,7 +1,7 @@
 // app/missions/page.tsx
 import MissionCard from '@/app/components/MissionCard';
 import NewMissionForm from '@/app/components/NewMissionForm';
-import { db } from '@/lib/db'; // 1. Importar la lógica de la DB directamente
+import { data } from '@/lib/db' ; // 1. Importar la lógica de la DB directamente
 import { auth } from '@clerk/nextjs/server'; // 2. Importar auth para obtener el usuario
 import { redirect } from 'next/navigation';
 
@@ -19,8 +19,8 @@ export default async function MissionsPage() {
   // 4. Llamamos directamente a la base de datos para obtener los datos.
   // Envolvemos en un Promise.all para que se ejecuten en paralelo y sea más rápido.
   const [missions, defaultMissions] = await Promise.all([
-    db.missions.findMany({ userId }),
-    db.defaultMissions.findMany()
+    data.missions.findMany({ userId }),
+    data.defaultMissions.findMany()
   ]);
 
   const activeMissions = missions.filter(m => !m.isCompleted);

@@ -3,10 +3,10 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 // El linter nos avisó que 'User' no se usa aquí. Lo eliminamos.
 import { Mission, DefaultMission } from './types';
 
-async function getDB() {
-  const { env } = await getCloudflareContext({ async: true });
-  return env.DB;
-}
+// Helper para obtener la DB
+const getDB = async () => {
+  return (await getCloudflareContext()).env.DB;
+};
 
 // Creamos un tipo que representa EXACTAMENTE lo que hay en la tabla 'Users' de la DB
 type AppUserFromDB = {
@@ -16,14 +16,26 @@ type AppUserFromDB = {
   level: number;
 };
 
-export const db = {
+export const data = {
   // ... (missions y defaultMissions no cambian) ...
   missions: {
     findMany: async ({ userId }: { userId: string }): Promise<Mission[]> => {
-      const db = await getDB();
-      const stmt = db.prepare('SELECT * FROM Tasks WHERE userId = ? AND isDefault = 0').bind(userId);
-      const { results } = await stmt.all<Mission>();
-      return results;
+        const db = await getDB();
+        const { results } = await db
+          .prepare('SELECT * FROM Tasks WHERE userId = ? AND isDefault = 0')
+          .bind(userId)
+          .all();
+        
+        // Mapear los resultados de la DB al tipo Mission
+        return results.map((task: any) => ({
+          id: task.id.toString(),
+          userId: task.userId,
+          title: task.title,
+          description: task.description || '',
+          experienceReward: task.experienceReward,
+          isCompleted: false, // Las tareas activas no están completadas
+          createdAt: task.createdAt
+        }));
     },
     findUnique: async ({ missionId, userId }: { missionId: string; userId: string }): Promise<Mission | null> => {
       const db = await getDB();
