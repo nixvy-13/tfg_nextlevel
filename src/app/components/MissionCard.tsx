@@ -10,15 +10,28 @@ export default function MissionCard({ mission }: { mission: Mission }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleComplete = async () => {
-    // ... (resto de la lógica) ...
+    if (mission.isCompleted) return;
+    setIsLoading(true);
+    try {
+      await fetch('/api/missions/Complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ missionId: mission.id }),
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to complete mission:", error);
+    } finally {
+      setIsLoading(false); 
+    }
   };
 
   return (
-    // Cambiamos el fondo según si la misión está completada o no
+
     <div className={`p-4 rounded-lg border transition-all ${
       mission.isCompleted 
-        ? 'bg-transparent border-slate-800 text-slate-500' // Estilo para misiones completadas (atenuadas)
-        : 'bg-slate-800 border-slate-700 hover:border-cyan-500' // Estilo para misiones activas
+        ? 'bg-transparent border-slate-800 text-slate-500'
+        : 'bg-slate-800 border-slate-700 hover:border-cyan-500'
     }`}>
       <div className="flex justify-between items-start">
         <div>
@@ -26,7 +39,6 @@ export default function MissionCard({ mission }: { mission: Mission }) {
           <p className="text-sm mt-1">{mission.description}</p>
         </div>
         <div className="text-right ml-4 flex-shrink-0">
-          {/* Recompensa de XP con color neón */}
           <span className="font-bold text-cyan-400 font-mono">+{mission.experienceReward} XP</span>
         </div>
       </div>

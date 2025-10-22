@@ -3,11 +3,10 @@
 import { dark } from '@clerk/themes';
 import { ClerkProvider, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata = {
-  title: 'Gamifica Tu Vida',
+  title: 'NextLevel',
   description: 'Completa misiones, sube de nivel.',
 };
 

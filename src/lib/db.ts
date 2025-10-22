@@ -1,20 +1,25 @@
 // lib/db.ts
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { User, Mission, DefaultMission } from './types';
+// El linter nos avisó que 'User' no se usa aquí. Lo eliminamos.
+import { Mission, DefaultMission } from './types';
 
-// 1. Convertimos la función a 'async'
 async function getDB() {
-  // 2. Usamos 'await' para esperar a que la promesa del contexto se resuelva
   const { env } = await getCloudflareContext({ async: true });
   return env.DB;
 }
 
-// --- LÓGICA DE BASE DE DATOS (REAL CON D1) ---
+// Creamos un tipo que representa EXACTAMENTE lo que hay en la tabla 'Users' de la DB
+type AppUserFromDB = {
+  clerkId: string;
+  username: string;
+  experience: number;
+  level: number;
+};
 
 export const db = {
+  // ... (missions y defaultMissions no cambian) ...
   missions: {
     findMany: async ({ userId }: { userId: string }): Promise<Mission[]> => {
-      // 3. Usamos 'await' CADA VEZ que llamamos a getDB()
       const db = await getDB();
       const stmt = db.prepare('SELECT * FROM Tasks WHERE userId = ? AND isDefault = 0').bind(userId);
       const { results } = await stmt.all<Mission>();
@@ -33,7 +38,7 @@ export const db = {
         await stmt.run();
         return { success: true }; 
     },
-    update: async ({ missionId, userId, data }: { missionId: string; userId: string, data: { isCompleted: boolean }}) => {
+    update: async ({ missionId, userId }: { missionId: string; userId: string}) => {
       const db = await getDB();
       const stmt = db.prepare('INSERT INTO TaskCompletions (taskId, userId) VALUES (?, ?)')
         .bind(missionId, userId);
@@ -50,23 +55,33 @@ export const db = {
       },
   },
   user: {
-    findUnique: async ({ userId }: { userId: string }): Promise<User | null> => {
+    // LA CORRECCIÓN: Usamos nuestro nuevo tipo específico en lugar de 'any'
+    findUnique: async ({ userId }: { userId: string }): Promise<AppUserFromDB | null> => {
         const db = await getDB();
         const stmt = db.prepare('SELECT * FROM Users WHERE clerkId = ?').bind(userId);
-        const appUser = await stmt.first<{clerkId: string, username: string, experience: number, level: number}>();
-        
-        if (!appUser) return null;
-
-        return {
-          id: appUser.clerkId,
-          name: appUser.username,
-          level: appUser.level,
-          experience: appUser.experience,
-          email: '', 
-          profilePictureUrl: '',
-        };
+        return await stmt.first<AppUserFromDB>();
     },
-    // Aquí irían las futuras funciones `update` y `create` para el usuario,
-    // y también necesitarían usar `await getDB()`.
+    update: async({ userId, data }: { userId: string, data: { experience: number, level: number }}) => {
+      const db = await getDB();
+      const stmt = db.prepare(
+        'UPDATE Users SET experience = ?, level = ? WHERE clerkId = ?'
+      ).bind(data.experience, data.level, userId);
+      await stmt.run();
+      return { success: true };
+    },
+    create: async ({ clerkId, username }: { clerkId: string, username: string }) => {
+      const db = await getDB();
+      const stmt = db.prepare('INSERT INTO Users (clerkId, username) VALUES (?, ?)')
+        .bind(clerkId, username);
+      await stmt.run();
+      return { success: true };
+    },
+    modify: async ({ userId, data }: { userId: string, data: { username: string } }) => {
+      const db = await getDB();
+      const stmt = db.prepare('UPDATE Users SET username = ? WHERE clerkId = ?')
+        .bind(data.username, userId);
+      await stmt.run();
+      return { success: true };
+    }
   }
 };
