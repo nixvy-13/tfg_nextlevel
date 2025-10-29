@@ -22,9 +22,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No se proporcionaron datos para modificar.' }, { status: 400 });
     }
     
-    // Aquí podrías añadir validación para el username (longitud, caracteres, si ya existe, etc.)
-
-    // Creamos una función 'modify' en nuestro db.user
     await data.user.modify({ userId, data: { username } });
 
     return NextResponse.json({ message: 'Usuario modificado con éxito.' });

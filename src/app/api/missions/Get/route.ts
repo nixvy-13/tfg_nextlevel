@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  // Obtenemos el taskId de los parámetros de búsqueda de la URL
   const taskId = req.nextUrl.searchParams.get('taskId');
 
   try {

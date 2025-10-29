@@ -16,9 +16,8 @@ export async function POST(_req: NextRequest) {
       return NextResponse.json({ error: 'El usuario ya existe.' }, { status: 409 });
     }
 
-    // LA CORRECCIÓN: Primero obtenemos el cliente con 'await'
+
     const client = await clerkClient();
-    // Y luego usamos el cliente para obtener el usuario
     const clerkUser = await client.users.getUser(userId);
     const username = clerkUser.username || `user_${userId.slice(5, 12)}`;
 
